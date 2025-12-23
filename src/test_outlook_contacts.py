@@ -1,6 +1,5 @@
 import os
 import sys
-from typing import Optional
 
 from dotenv import load_dotenv
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
@@ -32,7 +31,7 @@ def login(page: Page, email: str, password: str) -> None:
     # page.wait_for_url("https://outlook.live.com/people/*", wait_until="domcontentloaded")
 
 
-def delete_contact(page: Page, contact_name: str) -> None:
+def delete_contact(page: Page) -> None:
     """Delete a contact by name from the contacts list."""
     # Navigate to People/Contacts in case we are redirected elsewhere.
     # page.goto("https://outlook.office.com/mail/0/?deeplink=mail%2F0%2F", wait_until="aria-label="People")")
@@ -73,7 +72,7 @@ def delete_contact(page: Page, contact_name: str) -> None:
             # If confirm is missing, wait a bit and retry.
             page.wait_for_timeout(1000)
         count += 1
-        if count >= 6:
+        if count >= 5:
             page.reload()
             contact_list = page.locator("xpath=//span[text()='Your contact lists']").first
             contact_list.click()
@@ -81,7 +80,7 @@ def delete_contact(page: Page, contact_name: str) -> None:
 
 
 
-def run(contact_name: str, headless: bool = True) -> None:
+def run(headless: bool = True, browser_name: str = "chromium") -> None:
     load_dotenv()
 
     # email = os.getenv("OUTLOOK_EMAIL")
@@ -92,7 +91,12 @@ def run(contact_name: str, headless: bool = True) -> None:
         raise RuntimeError("Please set OUTLOOK_EMAIL and OUTLOOK_PASSWORD in your environment or .env file.")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        browser_name = (os.getenv("PLAYWRIGHT_BROWSER") or browser_name or "chromium").strip().lower()
+        if browser_name not in {"chromium", "firefox", "webkit"}:
+            raise ValueError("browser_name must be one of: chromium, firefox, webkit")
+
+        browser_type = getattr(p, browser_name)
+        browser = browser_type.launch(headless=headless)
         while True:
             context = None
             try:
@@ -100,7 +104,7 @@ def run(contact_name: str, headless: bool = True) -> None:
                 page = context.new_page()
 
                 login(page, email, password)
-                delete_contact(page, contact_name)
+                delete_contact(page)
                 break  # Success
             except Exception:
                 # Reset session/cache and retry from a fresh login.
@@ -114,9 +118,10 @@ def run(contact_name: str, headless: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python src/test_outlook_contacts.py '<CONTACT_NAME>'")
-        sys.exit(1)
+    browser_name = "chromium"
+    if "--browser" in sys.argv:
+        idx = sys.argv.index("--browser")
+        if idx + 1 < len(sys.argv):
+            browser_name = sys.argv[idx + 1]
 
-    contact = sys.argv[1]
-    run(contact_name=contact, headless=False)
+    run(headless=False, browser_name=browser_name)
