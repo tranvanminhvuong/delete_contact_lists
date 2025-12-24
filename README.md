@@ -5,14 +5,15 @@ Script này tự động đăng nhập Outlook (web) và thực hiện thao tác
 ## Cài đặt
 
 1. Tạo virtualenv nếu cần, sau đó cài phụ thuộc:
+
    ```bash
-   python -m venv venv
-   # Windows PowerShell:
-   .\venv\Scripts\Activate.ps1
+   python3 -m venv venv
+   source venv/bin/activate 
    pip install -r requirements.txt
    python -m playwright install
    ```
 2. Thiết lập biến môi trường hoặc tệp `.env`:
+
    ```env
    OUTLOOK_EMAIL=you@example.com
    OUTLOOK_PASSWORD=your-password
