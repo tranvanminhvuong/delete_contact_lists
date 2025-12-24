@@ -1,5 +1,6 @@
 import os
 import sys
+from typing import Optional
 
 from dotenv import load_dotenv
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
@@ -11,7 +12,7 @@ def login(page: Page, email: str, password: str) -> None:
 
     try:
         sign_in_link = page.get_by_role("link", name="Sign in")
-        if sign_in_link.is_visible(timeout=5000):
+        if sign_in_link.is_visible(timeout=30000):
             sign_in_link.click()
     except PlaywrightTimeoutError:
         pass
@@ -24,7 +25,7 @@ def login(page: Page, email: str, password: str) -> None:
 
     try:
         # Dismiss the "Stay signed in?" prompt if it appears.
-        page.get_by_role("button", name="No").click(timeout=4000)
+        page.get_by_role("button", name="Yes").click(timeout=4000)
     except PlaywrightTimeoutError:
         pass
 
@@ -44,10 +45,13 @@ def delete_contact(page: Page) -> None:
 
     # Open the first matching contact.
     contact_row = page.locator("xpath=//button[@aria-label='People']").first
+    
+    contact_row.wait_for(state="visible", timeout=30000)
     contact_row.click()
 
     # Open the command bar and delete the contact.
     contact_list = page.locator("xpath=//span[text()='Your contact lists']").first
+    contact_list.wait_for(state="visible", timeout=30000)
     contact_list.click()
 
     # Try a few times in case the delete/confirm buttons appear at different times.
@@ -63,6 +67,9 @@ def delete_contact(page: Page) -> None:
             delete_button.click(timeout=5000)
         except PlaywrightTimeoutError:
             # Delete button did not show in time; try confirm anyway.
+            page.reload()
+            contact_list.wait_for(state="visible", timeout=30000)
+            contact_list.click()
             continue
 
         try:
@@ -70,17 +77,21 @@ def delete_contact(page: Page) -> None:
             confirm_button.click(timeout=5000)
         except PlaywrightTimeoutError:
             # If confirm is missing, wait a bit and retry.
-            page.wait_for_timeout(1000)
+            page.reload()
+            contact_list.wait_for(state="visible", timeout=30000)
+            contact_list.click()
+            continue
         count += 1
         if count >= 5:
             page.reload()
             contact_list = page.locator("xpath=//span[text()='Your contact lists']").first
+            contact_list.wait_for(state="visible", timeout=30000)
             contact_list.click()
             count = 0
 
 
 
-def run(headless: bool = True, browser_name: str = "chromium") -> None:
+def run(contact_name: str, headless: bool = True) -> None:
     load_dotenv()
 
     # email = os.getenv("OUTLOOK_EMAIL")
@@ -91,12 +102,7 @@ def run(headless: bool = True, browser_name: str = "chromium") -> None:
         raise RuntimeError("Please set OUTLOOK_EMAIL and OUTLOOK_PASSWORD in your environment or .env file.")
 
     with sync_playwright() as p:
-        browser_name = (os.getenv("PLAYWRIGHT_BROWSER") or browser_name or "chromium").strip().lower()
-        if browser_name not in {"chromium", "firefox", "webkit"}:
-            raise ValueError("browser_name must be one of: chromium, firefox, webkit")
-
-        browser_type = getattr(p, browser_name)
-        browser = browser_type.launch(headless=headless)
+        browser = p.firefox.launch(headless=headless)
         while True:
             context = None
             try:
@@ -118,10 +124,9 @@ def run(headless: bool = True, browser_name: str = "chromium") -> None:
 
 
 if __name__ == "__main__":
-    browser_name = "chromium"
-    if "--browser" in sys.argv:
-        idx = sys.argv.index("--browser")
-        if idx + 1 < len(sys.argv):
-            browser_name = sys.argv[idx + 1]
+    if len(sys.argv) < 2:
+        print("Usage: python src/test_outlook_contacts.py '<CONTACT_NAME>'")
+        sys.exit(1)
 
-    run(headless=False, browser_name=browser_name)
+    contact = sys.argv[1]
+    run(contact_name=contact, headless=False)
