@@ -6,9 +6,18 @@ Script này tự động đăng nhập Outlook (web) và thực hiện thao tác
 
 1. Tạo virtualenv nếu cần, sau đó cài phụ thuộc:
 
+   Windows (PowerShell):
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   pip install -r requirements.txt
+   python -m playwright install
+   ```
+
+   Linux/macOS (bash):
    ```bash
    python3 -m venv venv
-   source venv/bin/activate 
+   source venv/bin/activate
    pip install -r requirements.txt
    python -m playwright install
    ```
@@ -19,21 +28,28 @@ Script này tự động đăng nhập Outlook (web) và thực hiện thao tác
    OUTLOOK_PASSWORD=your-password
    # Tuỳ chọn: chọn browser mặc định
    PLAYWRIGHT_BROWSER=firefox
+   # Tuỳ chọn: timeout mặc định (ms)
+   PLAYWRIGHT_TIMEOUT_MS=30000
    ```
 
-   Ghi chú: trong [src/test_outlook_contacts.py](src/test_outlook_contacts.py) hiện đang có email/password hard-code. Nếu muốn dùng `.env`, hãy uncomment 2 dòng `os.getenv(...)` và xoá hard-code.
+   Ghi chú: project đã bỏ hard-code credential; bắt buộc set `OUTLOOK_EMAIL`/`OUTLOOK_PASSWORD`.
 
 ## Chạy thử
 
+Xoá trong "Your contact lists":
 ```bash
-# Chromium (mặc định)
-python src/test_outlook_contacts.py
+python src/delete_outlook_contacts.py
+```
 
-# Firefox
-python src/test_outlook_contacts.py --browser firefox
+Xoá trong "Deleted":
+```bash
+python src/deleted_bin.py
+```
 
-# WebKit
-python src/test_outlook_contacts.py --browser webkit
+Tuỳ chọn:
+```bash
+python src/delete_outlook_contacts.py --browser firefox --timeout-ms 60000
+python src/deleted_bin.py --headless
 ```
 
 Nếu chưa cài browser tương ứng, chạy:
