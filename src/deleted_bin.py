@@ -15,7 +15,7 @@ def run(*, headless: bool = False, browser_name: str | None = None, timeout_ms: 
         total_deleted = 0
         last_excel_total = 0
         browser_restarts = 0
-        max_browser_restarts = 10
+        max_browser_restarts = 1000
 
         def flush_excel_partial() -> None:
             nonlocal last_excel_total
@@ -53,7 +53,7 @@ def run(*, headless: bool = False, browser_name: str | None = None, timeout_ms: 
                     page,
                     list_name="Deleted",
                     timeout_ms=cfg.timeout_ms,
-                    batch_size=5,
+                    batch_size=1000,
                     on_deleted=on_deleted,
                 )
                 log(f"Run: deleted_this_session={deleted_this} total_deleted={total_deleted}")

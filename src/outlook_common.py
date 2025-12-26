@@ -46,7 +46,13 @@ def append_excel_summary(
     Designed for quick run-level totals across multiple scripts.
     """
 
-    path = Path(excel_path) if excel_path else (Path(__file__).resolve().parent.parent / "outlook_delete_summary.xlsx")
+    if excel_path:
+        path = Path(excel_path)
+    else:
+        # One file per day. If the run crosses midnight, new appends go to a new file.
+        day = datetime.now().strftime("%Y-%m-%d")
+        filename = f"outlook_delete_summary_{day}.xlsx"
+        path = Path(__file__).resolve().parent.parent / filename
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
     except Exception:
@@ -350,22 +356,22 @@ def click_delete_and_confirm(page: Page, *, timeout_ms: int, confirm_variant: st
 
     # Ensure something is selected; otherwise Outlook may show a dialog that can't proceed
     # or disable the Delete action.
-    try:
-        main = page.locator("div[role='main']").first
-        first_checkbox = main.get_by_role("checkbox").first
-        if first_checkbox.is_visible(timeout=1000):
-            log("UI: select first checkbox")
-            _robust_click(first_checkbox, timeout_ms=min(timeout_ms, 3000), retries=2)
-    except Exception:
-        pass
+    # try:
+    #     main = page.locator("div[role='main']").first
+    #     first_checkbox = main.get_by_role("checkbox").first
+    #     if first_checkbox.is_visible(timeout=1000):
+    #         log("UI: select first checkbox")
+    #         _robust_click(first_checkbox, timeout_ms=min(timeout_ms, 3000), retries=2)
+    # except Exception:
+    #     pass
 
     delete_button = page.get_by_role("button", name="Delete").first
     delete_fallback = page.locator("xpath=//span[normalize-space(.)='Delete']").first
 
     try:
-        _robust_click(delete_button, timeout_ms=timeout_ms, retries=3)
+        _robust_click(delete_button, timeout_ms=timeout_ms, retries=6)
     except Exception:
-        _robust_click(delete_fallback, timeout_ms=timeout_ms, retries=3)
+        _robust_click(delete_fallback, timeout_ms=timeout_ms, retries=6)
 
     # Contact list deletion confirm button can be a plain <button> with direct text.
     # User-provided working selector:
@@ -432,7 +438,7 @@ def delete_many(
     timeout_ms: int,
     batch_size: int = 5,
     max_total: int | None = None,
-    max_failures: int = 3,
+    max_failures: int = 100,
     confirm_variant: str = "default",
     on_deleted: callable | None = None,
 ) -> int:

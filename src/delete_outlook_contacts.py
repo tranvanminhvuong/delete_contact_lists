@@ -15,7 +15,7 @@ def run(*, headless: bool = False, browser_name: str | None = None, timeout_ms: 
         total_deleted = 0
         last_excel_total = 0
         browser_restarts = 0
-        max_browser_restarts = 10
+        max_browser_restarts = 1000
 
         def flush_excel_partial() -> None:
             nonlocal last_excel_total
